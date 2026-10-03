@@ -1,0 +1,52 @@
+/* ============================================================
+   FILE:      sql/01_tables/raw_tables.sql
+   PURPOSE:   Source system registry and raw source records
+   RUN AFTER: sql/00_setup/01_database_schemas.sql
+   RERUN:     SAFE
+   ============================================================ */
+
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE SUPPLY_TRUST_WH;
+USE DATABASE SUPPLY_TRUST_DB;
+
+/* Source system registry */
+CREATE TABLE IF NOT EXISTS RAW.SOURCE_SYSTEM (
+    SOURCE_SYSTEM_ID       VARCHAR(50)     NOT NULL,
+    SOURCE_SYSTEM_NAME     VARCHAR(200)    NOT NULL,
+    SYSTEM_TYPE            VARCHAR(30)     NOT NULL,
+    SYSTEM_OWNER           VARCHAR(200),
+    DESCRIPTION            VARCHAR(1000),
+    IS_ACTIVE              BOOLEAN         DEFAULT TRUE,
+    CREATED_AT             TIMESTAMP_LTZ   DEFAULT CURRENT_TIMESTAMP(),
+
+    CONSTRAINT PK_SOURCE_SYSTEM PRIMARY KEY (SOURCE_SYSTEM_ID),
+    CONSTRAINT CK_SOURCE_SYSTEM_TYPE CHECK (
+        SYSTEM_TYPE IN ('ERP', 'WMS', 'SUPPLIER_PORTAL', 'LOGISTICS', 'MANUAL', 'OTHER')
+    )
+);
+
+/* Raw source records: one row = one version of a record from an
+   external system. Existing versions must not be overwritten. */
+CREATE TABLE IF NOT EXISTS RAW.SOURCE_RECORD (
+    SOURCE_RECORD_ID       VARCHAR(100)    NOT NULL,
+    SOURCE_SYSTEM_ID       VARCHAR(50)     NOT NULL,
+    EXTERNAL_RECORD_ID     VARCHAR(200)    NOT NULL,
+    RECORD_TYPE            VARCHAR(50)     NOT NULL,
+    RECORD_VERSION         NUMBER(10,0)    DEFAULT 1,
+    PAYLOAD                VARIANT         NOT NULL,
+    SOURCE_UPDATED_AT      TIMESTAMP_LTZ,
+    INGESTED_AT            TIMESTAMP_LTZ   DEFAULT CURRENT_TIMESTAMP(),
+    PAYLOAD_HASH           VARCHAR(128),
+    INGESTION_STATUS       VARCHAR(30)     DEFAULT 'INGESTED',
+    INGESTION_ERROR        VARCHAR(2000),
+
+    CONSTRAINT PK_SOURCE_RECORD PRIMARY KEY (SOURCE_RECORD_ID),
+    CONSTRAINT FK_SOURCE_RECORD_SYSTEM FOREIGN KEY (SOURCE_SYSTEM_ID)
+        REFERENCES RAW.SOURCE_SYSTEM (SOURCE_SYSTEM_ID),
+    CONSTRAINT CK_RECORD_TYPE CHECK (
+        RECORD_TYPE IN ('SUPPLIER', 'PART', 'PLANT', 'INVENTORY', 'ORDER', 'ORDER_LINE', 'SHIPMENT', 'OTHER')
+    ),
+    CONSTRAINT CK_INGESTION_STATUS CHECK (
+        INGESTION_STATUS IN ('INGESTED', 'VALIDATED', 'REJECTED')
+    )
+);
