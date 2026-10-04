@@ -1,0 +1,78 @@
+/* ============================================================
+   FILE:      sql/02_views/order_decision_view.sql
+   PURPOSE:   Convert trust evaluations into order decisions
+   RUN AFTER: sql/02_views/app_views.sql
+   RERUN:     SAFE
+   ============================================================ */
+
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE SUPPLY_TRUST_WH;
+USE DATABASE SUPPLY_TRUST_DB;
+
+CREATE OR REPLACE VIEW APP.V_ORDER_DECISION AS
+
+WITH LATEST_EVALUATION AS (
+    SELECT
+        EVALUATION_ID,
+        PART_ID,
+        PLANT_ID,
+        EVALUATED_VALUE,
+        UNIT,
+        STATUS,
+        REASON,
+        EVALUATED_AT,
+        EXPIRES_AT
+    FROM TRUST.TRUST_EVALUATION
+    WHERE ENTITY_TYPE = 'PART_AT_PLANT'
+      AND METRIC_NAME = 'USABLE_INVENTORY'
+
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY PART_ID, PLANT_ID
+        ORDER BY EVALUATED_AT DESC
+    ) = 1
+)
+
+SELECT
+    R.ORDER_ID,
+    R.LINE_NUMBER,
+    R.PART_ID,
+    R.PART_NAME,
+    R.PLANT_ID,
+    R.REQUIRED_QUANTITY,
+    R.UNIT,
+
+    E.EVALUATION_ID,
+
+    COALESCE(
+        E.STATUS,
+        'NOT_EVALUATED'
+    ) AS TRUST_STATUS,
+
+    E.EVALUATED_VALUE AS VERIFIED_QUANTITY,
+    E.REASON,
+    E.EVALUATED_AT,
+
+    CASE
+        WHEN E.STATUS IS NULL
+            THEN 'REVIEW_REQUIRED'
+
+        WHEN E.EXPIRES_AT < CURRENT_TIMESTAMP()
+            THEN 'REVIEW_REQUIRED'
+
+        WHEN E.STATUS <> 'VERIFIED'
+            THEN 'REVIEW_REQUIRED'
+
+        WHEN E.UNIT <> R.UNIT
+            THEN 'REVIEW_REQUIRED'
+
+        WHEN E.EVALUATED_VALUE >= R.REQUIRED_QUANTITY
+            THEN 'CAN_FULFILL'
+
+        ELSE 'INSUFFICIENT_STOCK'
+    END AS DECISION
+
+FROM APP.V_ORDER_REQUIREMENT R
+
+LEFT JOIN LATEST_EVALUATION E
+    ON E.PART_ID = R.PART_ID
+   AND E.PLANT_ID = R.PLANT_ID;
