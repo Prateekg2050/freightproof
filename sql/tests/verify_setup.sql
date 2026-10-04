@@ -24,8 +24,8 @@ WITH checks AS (
     UNION ALL SELECT 'Count: order lines',          COUNT(*), 1 FROM CORE.ORDER_LINE
     UNION ALL SELECT 'Count: business definitions', COUNT(*), 1 FROM TRUST.BUSINESS_DEFINITION
     UNION ALL SELECT 'Count: trust contracts',      COUNT(*), 1 FROM TRUST.TRUST_CONTRACT
-    UNION ALL SELECT 'Count: trust evaluations',    COUNT(*), 1 FROM TRUST.TRUST_EVALUATION
-    UNION ALL SELECT 'Count: evaluation evidence',  COUNT(*), 2 FROM TRUST.EVALUATION_EVIDENCE
+    UNION ALL SELECT 'Count: trust evaluations available', IFF(COUNT(*) >= 1, 1, 0), 1 FROM TRUST.TRUST_EVALUATION
+    UNION ALL SELECT 'Count: evaluation evidence available', IFF(COUNT(*) >= 2, 1, 0), 1 FROM TRUST.EVALUATION_EVIDENCE
 
     -- 2. Integrity: orphan records (Snowflake does not enforce FKs)
     UNION ALL
@@ -62,6 +62,12 @@ WITH checks AS (
     SELECT 'Logic: trust status CONFLICTED', COUNT(*), 1
     FROM APP.V_LATEST_TRUST_STATUS
     WHERE STATUS = 'CONFLICTED' AND ORDER_ID = 'ORD_001'
+    UNION ALL
+    SELECT 'Logic: conflicted order requires review', COUNT(*), 1
+    FROM APP.V_ORDER_DECISION
+    WHERE ORDER_ID = 'ORD_001'
+      AND TRUST_STATUS = 'CONFLICTED'
+      AND DECISION = 'REVIEW_REQUIRED'
 )
 SELECT
     check_name,

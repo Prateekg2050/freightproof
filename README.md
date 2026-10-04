@@ -1,7 +1,13 @@
 # freightproof
 Proof before every supply-chain decision
 Run in Snowsight with ACCOUNTADMIN and COMPUTE_WH:
-1. sql/00_setup → 01_tables → 02_views → 03_procedures
-2. sql/04_seed  (only once; use scripts/reset_database.sql to start over)
-3. sql/tests/verify_setup.sql  → all checks should PASS
-4. CALL TRUST.EVALUATE_INVENTORY_TRUST('TC_USABLE_INVENTORY', '1.0');
+1. sql/00_setup/01_*atabase_schemas.sql
+2. sql/01_tabl*s/raw_tables.sql
+3. sql/01_tables/*ore_tables.sql
+4. sql/01_tables/tr*st_tables.sql
+5. sql/02_views/app_views.sql
+6. sql/02_views/order_decision_view.sql
+7. sql/03_procedures/evaluate_inventory_trust.sql
+8. sql/04_seed/demo_base_data.sql
+9. sql/04_seed/demo_scenarios.sql
+10. sql/tests/verify_setup.sql
