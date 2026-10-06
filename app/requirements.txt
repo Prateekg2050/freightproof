@@ -1,4 +1,6 @@
+streamlit>=1.36
+pandas
 langgraph>=0.2
 snowflake-connector-python>=3.12
 python-dotenv>=1.0
-pytest>=8.0
+cryptography
