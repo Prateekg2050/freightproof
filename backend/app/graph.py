@@ -11,6 +11,7 @@ from app.agents.investigator import investigator_node, pick_target
 from app.agents.monitor import monitor_node
 from app.agents.planner import planner_node
 from app.agents.state import TrustAgentState
+from app.agents.verifier import verifier_node
 
 
 def route_after_monitor(state: dict) -> str:
@@ -36,6 +37,13 @@ def route_after_approval(state: dict) -> str:
     return "executor" if approved else END
 
 
+def route_after_verifier(state: dict) -> str:
+    verifications = state.get("verifications") or []
+    if verifications and verifications[-1].get("replan"):
+        return "investigator"
+    return END
+
+
 def build_graph(checkpointer=None):
     graph = StateGraph(TrustAgentState)
     graph.add_node("monitor", monitor_node)
@@ -43,6 +51,7 @@ def build_graph(checkpointer=None):
     graph.add_node("planner", planner_node)
     graph.add_node("approval", approval_node)
     graph.add_node("executor", executor_node)
+    graph.add_node("verifier", verifier_node)
 
     graph.add_edge(START, "monitor")
     graph.add_conditional_edges("monitor", route_after_monitor,
@@ -53,7 +62,9 @@ def build_graph(checkpointer=None):
                                 {"approval": "approval", END: END})
     graph.add_conditional_edges("approval", route_after_approval,
                                 {"executor": "executor", END: END})
-    graph.add_edge("executor", END)
+    graph.add_edge("executor", "verifier")
+    graph.add_conditional_edges("verifier", route_after_verifier,
+                                {"investigator": "investigator", END: END})
 
     # A checkpointer is required for interrupt/resume
     return graph.compile(checkpointer=checkpointer or _Saver())

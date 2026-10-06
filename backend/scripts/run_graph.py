@@ -86,6 +86,15 @@ def print_report(request: str, opts: dict, state: dict) -> None:
         print("\n=== EXECUTION ===")
         for r in execution:
             print(json.dumps(r, default=str))
+    verifications = state.get("verifications")
+    if verifications:
+        print("\n=== VERIFICATION ===")
+        for v in verifications:
+            print(f"\nCycle {v.get('cycle')}: {v.get('decision_before')} -> {v.get('decision_after')}")
+            for o in v.get("outcomes", []):
+                print(f"  {o['action_id']} | {o['action_type']} | {o['outcome']} | status {o['action_status']}")
+            print(f"  next: {v.get('next')}")
+            print(f"  summary: {v.get('summary')}")
 
 
 def main() -> None:
@@ -104,6 +113,8 @@ def main() -> None:
         interrupts = pending_interrupts(graph, config)
 
     print_report(request, opts, graph.get_state(config).values)
+
+    
 
 
 if __name__ == "__main__":

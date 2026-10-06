@@ -17,5 +17,8 @@ class TrustAgentState(TypedDict, total=False):
     # Approval and Executor
     approvals: dict
     execution: list
+    # Verifier
+    cycle: int
+    verifications: Annotated[list, operator.add]
     # Each agent appends its steps here; the UI will display this
     trace: Annotated[list, operator.add]
