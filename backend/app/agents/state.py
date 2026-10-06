@@ -14,5 +14,8 @@ class TrustAgentState(TypedDict, total=False):
     investigation: dict
     # Planner
     plan: dict
+    # Approval and Executor
+    approvals: dict
+    execution: list
     # Each agent appends its steps here; the UI will display this
     trace: Annotated[list, operator.add]
