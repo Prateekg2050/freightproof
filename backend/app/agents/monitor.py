@@ -28,7 +28,7 @@ Rules:
 - Then one line per blocked order, in the given order: order id, value,
   part, trust status, and why it is blocked in plain words.
 - Do not propose fixes. Another agent handles that.
-- Maximum 120 words. Plain text, no headings.
+- Maximum 120 words. Plain text only: no markdown, no asterisks, no headings.
 
 FACTS:
 {facts}
