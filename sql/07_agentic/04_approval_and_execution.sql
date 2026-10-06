@@ -193,4 +193,36 @@ BEGIN
             QUANTITY, UNIT, QUANTITY_TYPE, EFFECTIVE_AT
         )
         SELECT 'CLAIM_' || :V_RUN || '_SYS_WMS', 'REC_' || :V_RUN || '_SYS_WMS', 'SYS_WMS',
-               :V_PART, :V_PLANT, :V_QTY
+               :V_PART, :V_PLANT, :V_QTY, :V_UNIT, 'USABLE', CURRENT_TIMESTAMP();
+
+        V_POSTED := 1;
+        V_NOTE := 'Simulated: warehouse confirmed the item mapping and reported ' || V_QTY;
+
+    ELSE
+        -- EXPEDITE_SUPPLY, PARTIAL_SHIPMENT_AND_EXPEDITE, RUN_TRUST_EVALUATION
+        V_NOTE := 'Request dispatched to ' || COALESCE(V_OWNER, 'owner') || '; no data change';
+    END IF;
+
+    V_RESULT := OBJECT_CONSTRUCT(
+        'ok', TRUE,
+        'action_id', P_ACTION_ID,
+        'action_type', V_TYPE,
+        'records_posted', V_POSTED,
+        'quantity', V_QTY,
+        'note', V_NOTE,
+        'simulated', TRUE
+    );
+
+    UPDATE TRUST.ACTION_REQUEST
+    SET STATUS = 'EXECUTED',
+        EXECUTED_AT = CURRENT_TIMESTAMP(),
+        RESULT = :V_RESULT
+    WHERE ACTION_ID = :P_ACTION_ID
+      AND STATUS = 'APPROVED';
+
+    RETURN V_RESULT;
+END;
+$$;
+
+GRANT USAGE ON PROCEDURE TRUST.DECIDE_ACTION(VARCHAR, VARCHAR, VARCHAR, VARCHAR) TO ROLE AGENT_ROLE;
+GRANT USAGE ON PROCEDURE TRUST.EXECUTE_ACTION(VARCHAR) TO ROLE AGENT_ROLE;
